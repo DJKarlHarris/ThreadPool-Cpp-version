@@ -1,11 +1,11 @@
-#include <threadpool.h>
+#include "threadpool.h"
 #include <pthread.h>
 
 //任务结构体
 typedef struct Task {
     void (*function)(void* arg);
     void* arg;
-};
+}Task;
 
 //线程池结构体
 typedef struct ThreadPool {
@@ -31,4 +31,5 @@ typedef struct ThreadPool {
     pthread_mutex_t mutexBuzyNum;  //忙线程变量锁
     pthread_cond_t notFull;  //判断是否为满
     pthread_cond_t notEmpty;  //判断是否为空
-}
+
+};

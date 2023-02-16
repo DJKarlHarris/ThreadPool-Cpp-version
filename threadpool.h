@@ -1,8 +1,10 @@
 #ifndef _THREADPOOL_H_
 #define _THREADPOOL_H_
 
-typedef struct ThreadPool ThreadPool;
+#include <stdio.h>
 
+
+typedef struct ThreadPool ThreadPool;
 
 //创建线程池并初始化，返回线程池地址
 ThreadPool* threadPoolCreate(int min, int max,int Size) {
@@ -16,7 +18,7 @@ ThreadPool* threadPoolCreate(int min, int max,int Size) {
         }
 
         //创建工作线程数组
-        pool->workerID = malloc(maxNum * sizeof(pthread_t));
+        pool->workerID = malloc(max * sizeof(pthread_t));
         if(pool->workerID == NULL) {
             printf("create workerID fail...\n");
             break;
