@@ -1,4 +1,5 @@
 #include <threadpool.h>
+#include <pthread.h>
 
 //任务结构体
 typedef struct Task {
@@ -15,7 +16,7 @@ typedef struct ThreadPool {
     int queueFront; //队头指针
     int queueRear; //队尾指针
 
-    pthread_t* worderID;  //工作线程id数组
+    pthread_t* workerID;  //工作线程id数组
     pthread_t managerID; //管理线程id
 
     int minNum;  //最小线程数
