@@ -2,83 +2,42 @@
 #define _THREADPOOL_H_
 
 #include <stdio.h>
+#include <pthread.h>
+
+//任务结构体
+typedef struct Task {
+    void (*function)(void* arg);
+    void* arg;
+}Task;
+
+//线程池结构体
+typedef struct ThreadPool {
+
+    Task* taskQueue;  //任务队列
+    int queueCapacity;  //队列最大容量
+    int queueSize;  //队列任务个数
+    int queueFront; //队头指针
+    int queueRear; //队尾指针
+
+    pthread_t* workerID;  //工作线程id数组
+    pthread_t managerID; //管理线程id
+
+    int minNum;  //最小线程数
+    int maxNum;  //最大线程数
+    int buzyNum;  //忙线程数
+    int liveNum;  //存活线程数
+    int exitNum;  //销毁线程数
+
+    int shutdown;  //线程池是否工作，1为工作，2为销毁
+
+    pthread_mutex_t mutexPool;  //线程池锁
+    pthread_mutex_t mutexBuzyNum;  //忙线程变量锁
+    pthread_cond_t notFull;  //判断是否为满
+    pthread_cond_t notEmpty;  //判断是否为空
+
+}ThreadPool;
 
 
-typedef struct ThreadPool ThreadPool;
 
-//创建线程池并初始化，返回线程池地址
-ThreadPool* threadPoolCreate(int min, int max,int Size) {
-
-    {
-        //创建线程池实例
-        ThreadPool* pool = (ThreadPool*)malloc(sizeof(ThreadPool));
-        if(pool == NULL) {
-            printf("create pool fail...\n");
-            break;
-        }
-
-        //创建工作线程数组
-        pool->workerID = malloc(max * sizeof(pthread_t));
-        if(pool->workerID == NULL) {
-            printf("create workerID fail...\n");
-            break;
-        }
-        memset(pool->workerID, 0, sizeof(pthread_t) * max);
-        pool->minNum = min;
-        pool->maxNum = max;
-        pool->busyNum = 0;
-        pool->liveNum = min; 
-        pool->exit = 0;
-
-        //创建任务数组
-        pool->taskQueue = (Task*)malloc(sizeof(Task) * queueSize);
-        pool->queueCapacity = Size;
-        pool->queueSize = 0; 
-        pool->queueFront = 0;
-        pool->queueRear = 0;
-
-        //线程池为就绪状态
-        pool->shutdown = 0;
-
-        //初始化互斥锁和条件变量
-        if(pthread_mutex_init(&mutexPool, NULL) != 0 || 
-        pthread_mutex_init(&mutexBuzyNum, NULL) != 0 ||
-        pthread_cond_init(&notFull, NULL) != 0 ||
-        pthread_cond_init(&notEmpty, NULL) != 0) {
-            printf("mutex or condition creation fail...\n");
-            break;
-        } 
-
-        //创建线程
-        pthread_create(&pool->managerID, NULL, manager, NULL);
-        for(int i = 0; i < min; i++) {
-            pthread_create(&pool->workerID, NULL, worker, NULL);
-        }
-
-        return pool;
-
-    } while(0);
-    
-    if(pool && pool->taskQueue) {
-        free(pool->taskQueue);
-    }
-
-    if(pool && pool->workerID) {
-        free(pool->workerID);
-    }
-
-    if(pool) {
-        free(pool);
-    }
-    //malloc - free
-    return NULL;
-}
-//销毁线程池
-
-//添加任务
-
-//获取当前线程池多少忙线程
-
-//获取当前线程池多少活着的线程
 
 #endif
