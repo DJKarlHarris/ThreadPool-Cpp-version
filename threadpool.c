@@ -1,11 +1,8 @@
-
 #include <stdio.h>
 #include "threadpool.h"
 
-//工作函数
-void* worker(void* arg);
-//管理者函数
-void* manager(void* arg);
+#define KILLNUMBER 2
+#define CREATENUMBER 2
 
 //创建线程池并初始化，返回线程池地址
 ThreadPool* threadPoolCreate(int min, int max,int Size) {
@@ -51,9 +48,9 @@ ThreadPool* threadPoolCreate(int min, int max,int Size) {
         } 
 
         //创建线程
-        pthread_create(&pool->managerID, NULL, manager, NULL);
+        pthread_create(&pool->managerID, NULL, manager, pool);
         for(int i = 0; i < min; i++) {
-            pthread_create(&pool->workerID, NULL, worker, NULL);
+            pthread_create(&pool->workerID, NULL, worker, pool);
         }
 
         return pool;
@@ -94,6 +91,12 @@ void* worker(void* arg) {
         while(pool->queueSize == 0 && !pool->shutdown) {
             //阻塞工作线程
             pthread_cond_wait(&pool->notEmpty, &pool->mutexPool);
+            //工作线程自杀
+            if(pool->exitNum) {
+                pool->exitNum--;
+                pthread_mutex_unlock(&pool->mutexPool);
+                pthread_exit(NULL);
+            }
         }
 
         if(pool->shutdown) {
@@ -121,18 +124,64 @@ void* worker(void* arg) {
         free(task.arg);
         task.arg = NULL;
 
-
         printf("threadID xxx stop working");
         //忙线程--
         pthread_mutex_lock(&pool->mutexBuzyNum);
         pool->buzyNum++;
         pthread_mutex_unlock(&pool->mutexBuzyNum);
-
+    }
+    
 }
 
 //管理者线程
 void* manager(void* arg) {
+    ThreadPool* pool = (ThreadPool*)arg;
+    while(pool->shutdown == 0) {
+        //每隔三秒检测一次
+        sleep(3);
 
-}
+        //获取任务个数、存活线程数
+        pthread_mutex_lock(&pool->mutexPool);
+        int queueSize = pool->queueSize;
+        int liveNum = pool->liveNum;
+        pthread_mutex_unlock(&pool->mutexPool);
 
+        pthread_mutex_lock(&pool->mutexBuzyNum);
+        int buzyNum = pool->buzyNum;
+        pthread_mutex_unlock(&pool->mutexBuzyNum);
+
+        //添加线程：每次添加CREATNUMBER个，
+        //任务个数>存活线程个数 && 存活线程数 < 最大线程数
+        int count = 0;
+        if(queueSize > pool->liveNum && liveNum < pool->maxNum) {
+            pthread_mutex_lock(&pool->mutexPool);
+            //for循环中有pool->liveNum是互斥量，所以锁要上到for循环外部
+            for(int i = 0; i < pool->maxNum && pool->liveNum < pool->maxNum && count < CREATENUMBER; i++) {
+                if(pool->workerID[i] == 0) {
+                    pthread_create(&pool->workerID[i], NULL, worker, pool);
+                    count++;
+                    pool->liveNum++;
+                }
+            }
+            pthread_mutex_unlock(&pool->mutexPool);
+        }
+
+        //这里可能出现问题，如果同时存在添加线程和销毁线程的条件
+        //销毁线程
+        //忙线程*2<存活线程 && 存活线程 > 最小线程
+        //每次删除KILLNUMBER个
+        if(buzyNum * 2 < liveNum && liveNum > pool->minNum) {
+            //工作线程根据KILLNUMBER来判定自己醒来时需不需要自杀
+            pthread_mutex_lock(&pool->mutexPool);
+            pool->exitNum = KILLNUMBER;
+            pthread_mutex_unlock(&pool->mutexPool);
+            //每次唤醒KILLNUMBER个
+            for(int i = 0; i < KILLNUMBER; i++) {
+                pthread_cond_signal(&pool->notEmpty);
+            }
+        }
+        //管理线程不是主动销毁线程，而是让工作线程去自杀
+
+    }
+    return NULL;
 }

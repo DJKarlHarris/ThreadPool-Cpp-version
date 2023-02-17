@@ -37,7 +37,10 @@ typedef struct ThreadPool {
 
 }ThreadPool;
 
-
+//工作函数
+void* worker(void* arg);
+//管理者函数
+void* manager(void* arg);
 
 
 #endif
