@@ -42,6 +42,15 @@ void* worker(void* arg);
 //管理者函数
 void* manager(void* arg);
 
+//获取线程池中工作线程的个数
+int threadPoolBuzyNum(ThreadPool* pool);
+
+//获取线程池中活着线程的个数
+int threadPoolAliveNum(ThreadPool* pool);
+
+//线程销毁
+int threadPoolDestory(ThreadPool* pool);
+
 //退出函数修改tid
 void threadExit(ThreadPool* pool) {
     pthread_t tid = pthread_self();
@@ -57,7 +66,6 @@ void threadExit(ThreadPool* pool) {
 
 //添加任务函数
 void threadPoolAddTask(ThreadPool* pool, void(*func)(void*), void* arg);
-
 
 
 #endif

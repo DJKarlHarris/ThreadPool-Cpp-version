@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include "threadpool.h"
 
@@ -71,13 +72,6 @@ ThreadPool* threadPoolCreate(int min, int max,int size) {
     //malloc - free
     return NULL;
 }
-//销毁线程池
-
-//添加任务
-
-//获取当前线程池多少忙线程
-
-//获取当前线程池多少活着的线程
 
 //工作函数
 void* worker(void* arg) {
@@ -220,5 +214,54 @@ void threadPoolAddTask(ThreadPool* pool, void(*func)(void*), void* arg) {
     pthread_mutex_unlock(&pool->mutexPool);
 }
 
+int threadPoolBuzyNum(ThreadPool *pool) {
+    pthread_mutex_lock(&pool->mutexBuzyNum);
+    int buzyNum = pool->buzyNum;
+    pthread_mutex_unlock(&pool->mutexBuzyNum);
+    return buzyNum;
+}
 
+int threadPoolAliveNum(ThreadPool *pool) {
+    pthread_mutex_lock(&pool->mutexPool);
+    int aliveNum = pool->liveNum;
+    pthread_mutex_unlock(&pool->mutexPool);
+    return aliveNum;
+}
 
+//销毁线程池
+int threadPoolDestory(ThreadPool *pool) {
+    if(pool == NULL) {
+        return -1;
+    }
+
+    pool->shutdown = 1;
+
+    //销毁管理者线程
+    pthread_join(pool->managerID, NULL);
+
+    //销毁工作线程
+    //唤醒阻塞的工作线程
+    //当shutdown == 1时，醒着的工作线程会自动退出
+    for(int i = 0; i < pool->liveNum; i++) {
+        pthread_cond_signal(&pool->notEmpty);
+    }
+
+    //释放堆内存
+    if(pool->taskQueue) {
+        free(pool->taskQueue);
+    }
+
+    if(pool->workerID) {
+        free(pool->workerID);
+    }
+
+    pthread_mutex_destroy(&pool->mutexPool);
+    pthread_mutex_destroy(&pool->mutexBuzyNum);
+    pthread_cond_destroy(&pool->notEmpty);
+    pthread_cond_destroy(&pool->notFull);
+
+    free(pool);
+    pool == NULL;
+
+    return 1;
+}
