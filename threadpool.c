@@ -1,6 +1,9 @@
 #include <pthread.h>
 #include <stdio.h>
 #include "threadpool.h"
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define KILLNUMBER 2
 #define CREATENUMBER 2
@@ -17,7 +20,7 @@ ThreadPool* threadPoolCreate(int min, int max,int size) {
         }
 
         //创建工作线程数组
-        pool->workerID = malloc(max * sizeof(pthread_t));
+        pool->workerID = (pthread_t*)malloc(max * sizeof(pthread_t));
         if(pool->workerID == NULL) {
             printf("create workerID fail...\n");
             break;
@@ -30,7 +33,7 @@ ThreadPool* threadPoolCreate(int min, int max,int size) {
         pool->exitNum = 0;
 
         //创建任务数组
-        pool->taskQueue = (Task*)malloc(sizeof(Task) * pool->queueSize);
+        pool->taskQueue = (Task*)malloc(sizeof(Task) * size);
         pool->queueCapacity = size;
         pool->queueSize = 0; 
         pool->queueFront = 0;
@@ -51,7 +54,7 @@ ThreadPool* threadPoolCreate(int min, int max,int size) {
         //创建线程
         pthread_create(&pool->managerID, NULL, manager, pool);
         for(int i = 0; i < min; i++) {
-            pthread_create(&pool->workerID, NULL, worker, pool);
+            pthread_create(&pool->workerID[i], NULL, worker, pool);
         }
 
         return pool;
@@ -86,7 +89,7 @@ void* worker(void* arg) {
             //阻塞工作线程
             pthread_cond_wait(&pool->notEmpty, &pool->mutexPool);
             //工作线程自杀
-            if(pool->exitNum) {
+            if(pool->exitNum > 0) {
                 //不管线程有没有自杀成功，exitNum都要恢复为0
                 pool->exitNum--;
                 if(pool->liveNum > pool->minNum) {
@@ -99,8 +102,9 @@ void* worker(void* arg) {
         }
 
         if(pool->shutdown) {
+            printf("shutdown exit！\n");
             pthread_mutex_unlock(&pool->mutexPool);
-            pthread_exit(NULL);
+            threadExit(pool);
         }
 
         //取出任务
@@ -115,7 +119,7 @@ void* worker(void* arg) {
         pthread_mutex_unlock(&pool->mutexPool);
 
         //忙线程++
-        printf("threadID xxx start working");
+        printf("threadID %ld start working\n",pthread_self());
         pthread_mutex_lock(&pool->mutexBuzyNum);
         pool->buzyNum++;
         pthread_mutex_unlock(&pool->mutexBuzyNum);
@@ -125,12 +129,13 @@ void* worker(void* arg) {
         free(task.arg);
         task.arg = NULL;
 
-        printf("threadID xxx stop working");
+        printf("threadID %ld stop working\n",pthread_self());
         //忙线程--
         pthread_mutex_lock(&pool->mutexBuzyNum);
         pool->buzyNum--;
         pthread_mutex_unlock(&pool->mutexBuzyNum);
     }
+    return NULL;
     
 }
 
@@ -161,6 +166,7 @@ void* manager(void* arg) {
              pool->liveNum < pool->maxNum &&
               count < CREATENUMBER; i++) {
                 if(pool->workerID[i] == 0) {
+                    printf("New thread is created!\n");
                     pthread_create(&pool->workerID[i], NULL, worker, pool);
                     count++;
                     pool->liveNum++;
@@ -193,12 +199,14 @@ void* manager(void* arg) {
 void threadPoolAddTask(ThreadPool* pool, void(*func)(void*), void* arg) {
     
     pthread_mutex_lock(&pool->mutexPool);
+
     //阻塞生产线程
     while(pool->queueSize == pool->queueCapacity && !pool->shutdown) {
         pthread_cond_wait(&pool->notFull, &pool->mutexPool);
     }
     
     if(pool->shutdown == 1) {
+        pthread_mutex_unlock(&pool->mutexPool);
         return;
     }
 
@@ -264,4 +272,16 @@ int threadPoolDestory(ThreadPool *pool) {
     pool == NULL;
 
     return 1;
+}
+//退出函数修改tid
+void threadExit(ThreadPool* pool) {
+    pthread_t tid = pthread_self();
+    for(int i = 0; i < pool->maxNum; i++) {
+        if(pool->workerID[i] == tid) {
+            pool->workerID[i] = 0;
+            printf("threadExit() called, threadID:%ld eixiting\n",tid);
+            break;
+        }
+    }
+    pthread_exit(NULL);
 }

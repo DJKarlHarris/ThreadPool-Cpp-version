@@ -37,6 +37,9 @@ typedef struct ThreadPool {
 
 }ThreadPool;
 
+//创建线程池
+ThreadPool* threadPoolCreate(int min, int max,int size);
+
 //工作函数
 void* worker(void* arg);
 //管理者函数
@@ -52,17 +55,7 @@ int threadPoolAliveNum(ThreadPool* pool);
 int threadPoolDestory(ThreadPool* pool);
 
 //退出函数修改tid
-void threadExit(ThreadPool* pool) {
-    pthread_t tid = pthread_self();
-    for(int i = 0; i < pool->liveNum; i++) {
-        if(pool->workerID[i] == tid) {
-            pool->workerID[i] = 0;
-            printf("threadExit() called, threadID:%ld eixiting",tid);
-            break;
-        }
-    }
-    pthread_exit(NULL);
-}
+void threadExit(ThreadPool* pool);
 
 //添加任务函数
 void threadPoolAddTask(ThreadPool* pool, void(*func)(void*), void* arg);
