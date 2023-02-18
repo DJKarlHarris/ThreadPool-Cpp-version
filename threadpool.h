@@ -42,5 +42,22 @@ void* worker(void* arg);
 //管理者函数
 void* manager(void* arg);
 
+//退出函数修改tid
+void threadExit(ThreadPool* pool) {
+    pthread_t tid = pthread_self();
+    for(int i = 0; i < pool->liveNum; i++) {
+        if(pool->workerID[i] == tid) {
+            pool->workerID[i] = 0;
+            printf("threadExit() called, threadID:%ld eixiting",tid);
+            break;
+        }
+    }
+    pthread_exit(NULL);
+}
+
+//添加任务函数
+void threadPoolAddTask(ThreadPool* pool, void(*func)(void*), void* arg);
+
+
 
 #endif

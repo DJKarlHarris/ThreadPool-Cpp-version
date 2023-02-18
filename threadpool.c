@@ -5,7 +5,7 @@
 #define CREATENUMBER 2
 
 //创建线程池并初始化，返回线程池地址
-ThreadPool* threadPoolCreate(int min, int max,int Size) {
+ThreadPool* threadPoolCreate(int min, int max,int size) {
 
     ThreadPool* pool = (ThreadPool*)malloc(sizeof(ThreadPool));
     do {
@@ -30,7 +30,7 @@ ThreadPool* threadPoolCreate(int min, int max,int Size) {
 
         //创建任务数组
         pool->taskQueue = (Task*)malloc(sizeof(Task) * pool->queueSize);
-        pool->queueCapacity = Size;
+        pool->queueCapacity = size;
         pool->queueSize = 0; 
         pool->queueFront = 0;
         pool->queueRear = 0;
@@ -87,15 +87,20 @@ void* worker(void* arg) {
     while(1) {
         pthread_mutex_lock(&pool->mutexPool);
         //while的原因：若阻塞9个线程，但只有一个资源，那么唤醒一个线程，继续阻塞8个线程
-        //阻塞条件：任务队列没有任务，并且pool还存在
+        //阻塞条件：任务队列没有任务，并且pool没有销毁
         while(pool->queueSize == 0 && !pool->shutdown) {
             //阻塞工作线程
             pthread_cond_wait(&pool->notEmpty, &pool->mutexPool);
             //工作线程自杀
             if(pool->exitNum) {
+                //不管线程有没有自杀成功，exitNum都要恢复为0
                 pool->exitNum--;
-                pthread_mutex_unlock(&pool->mutexPool);
-                pthread_exit(NULL);
+                if(pool->liveNum > pool->minNum) {
+                    pool->liveNum--;
+                    pthread_mutex_unlock(&pool->mutexPool);
+                    //调用退出线程函数
+                    threadExit(pool);                    
+                }
             }
         }
 
@@ -111,6 +116,8 @@ void* worker(void* arg) {
         pool->queueFront = (pool->queueFront + 1) % pool->queueCapacity;
         pool->queueSize--;
 
+        //唤醒生产者线程
+        pthread_cond_signal(&pool->notFull);
         pthread_mutex_unlock(&pool->mutexPool);
 
         //忙线程++
@@ -127,7 +134,7 @@ void* worker(void* arg) {
         printf("threadID xxx stop working");
         //忙线程--
         pthread_mutex_lock(&pool->mutexBuzyNum);
-        pool->buzyNum++;
+        pool->buzyNum--;
         pthread_mutex_unlock(&pool->mutexBuzyNum);
     }
     
@@ -136,7 +143,7 @@ void* worker(void* arg) {
 //管理者线程
 void* manager(void* arg) {
     ThreadPool* pool = (ThreadPool*)arg;
-    while(pool->shutdown == 0) {
+    while(!pool->shutdown) {
         //每隔三秒检测一次
         sleep(3);
 
@@ -156,7 +163,9 @@ void* manager(void* arg) {
         if(queueSize > pool->liveNum && liveNum < pool->maxNum) {
             pthread_mutex_lock(&pool->mutexPool);
             //for循环中有pool->liveNum是互斥量，所以锁要上到for循环外部
-            for(int i = 0; i < pool->maxNum && pool->liveNum < pool->maxNum && count < CREATENUMBER; i++) {
+            for(int i = 0; i < pool->maxNum &&
+             pool->liveNum < pool->maxNum &&
+              count < CREATENUMBER; i++) {
                 if(pool->workerID[i] == 0) {
                     pthread_create(&pool->workerID[i], NULL, worker, pool);
                     count++;
@@ -185,3 +194,31 @@ void* manager(void* arg) {
     }
     return NULL;
 }
+
+//添加任务函数
+void threadPoolAddTask(ThreadPool* pool, void(*func)(void*), void* arg) {
+    
+    pthread_mutex_lock(&pool->mutexPool);
+    //阻塞生产线程
+    while(pool->queueSize == pool->queueCapacity && !pool->shutdown) {
+        pthread_cond_wait(&pool->notFull, &pool->mutexPool);
+    }
+    
+    if(pool->shutdown == 1) {
+        return;
+    }
+
+    //放入任务
+    pool->taskQueue[pool->queueRear].function = func;
+    pool->taskQueue[pool->queueRear].arg = arg;
+    pool->queueRear = (pool->queueRear + 1) % pool->queueCapacity;
+    pool->queueSize++;
+
+    //唤醒阻塞的工作线程
+    pthread_cond_signal(&pool->notEmpty);
+
+    pthread_mutex_unlock(&pool->mutexPool);
+}
+
+
+
