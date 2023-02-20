@@ -244,7 +244,7 @@ int threadPoolDestory(ThreadPool *pool) {
 
     pool->shutdown = 1;
 
-    //销毁管理者线程
+    //回收管理者线程
     pthread_join(pool->managerID, NULL);
 
     //销毁工作线程
@@ -253,9 +253,16 @@ int threadPoolDestory(ThreadPool *pool) {
     for(int i = 0; i < pool->liveNum; i++) {
         pthread_cond_signal(&pool->notEmpty);
     }
+
+    //回收工作线程销毁完毕,保证销毁工作线程在销毁线程池之前
+    for(int i = 0; i < pool->maxNum; i++) {
+        if(pool->workerID[i] != 0) {
+            pthread_join(pool->workerID[i], NULL);
+        }
+    }
     
-    //等待工作线程自杀完毕后才释放所有的线程池资源
-    sleep(5);
+    ////如果不采用join的话就要等待工作线程自杀完毕后才释放所有的线程池资源
+    //sleep(5);
 
     //释放堆内存
     if(pool->taskQueue) {
