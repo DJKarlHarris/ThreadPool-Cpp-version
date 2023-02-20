@@ -253,6 +253,9 @@ int threadPoolDestory(ThreadPool *pool) {
     for(int i = 0; i < pool->liveNum; i++) {
         pthread_cond_signal(&pool->notEmpty);
     }
+    
+    //等待工作线程自杀完毕后才释放所有的线程池资源
+    sleep(5);
 
     //释放堆内存
     if(pool->taskQueue) {
@@ -276,6 +279,7 @@ int threadPoolDestory(ThreadPool *pool) {
 //退出函数修改tid
 void threadExit(ThreadPool* pool) {
     pthread_t tid = pthread_self();
+    printf("td: %ld \n",tid);
     for(int i = 0; i < pool->maxNum; i++) {
         if(pool->workerID[i] == tid) {
             pool->workerID[i] = 0;
