@@ -26,7 +26,8 @@ struct Task {
 //任务队列类
 class TaskQueue {
 
-    TaskQueue(Task task);
+public:
+    TaskQueue();
     ~TaskQueue();
 
     //取出任务

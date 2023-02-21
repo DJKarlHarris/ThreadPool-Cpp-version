@@ -1,7 +1,7 @@
 #include "TaskQueue.h"
 #include <pthread.h>
 
-TaskQueue::TaskQueue(Task task) {
+TaskQueue::TaskQueue() {
     pthread_mutex_init(&m_mutex, NULL);
 }
 
