@@ -3,12 +3,39 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include <queue>
 
+using callback = void (*)(void*);
 //任务结构体
-typedef struct Task {
-    void (*function)(void* arg);
-    void* arg;
-}Task;
+//typedef struct Task {
+//    void (*function)(void* arg);
+//    void* arg;
+//}Task;
+
+//任务类
+struct Task {
+
+    Task() {
+        m_function = nullptr;
+        m_arg = nullptr;
+    }
+
+    Task(callback function, void* arg) {
+        m_function = function;
+        m_arg = arg;
+    }
+
+    callback m_function;
+    void* m_arg;
+};
+
+//任务队列类
+class TaskQueue {
+
+private:
+    std::queue<Task> m_queue;
+    int queueCapacity;
+};
 
 //线程池结构体
 typedef struct ThreadPool {
