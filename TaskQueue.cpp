@@ -1,17 +1,20 @@
 #include "TaskQueue.h"
 #include <pthread.h>
 
-TaskQueue::TaskQueue() {
+template<typename T>
+TaskQueue<T>::TaskQueue() {
     pthread_mutex_init(&m_mutex, NULL);
 }
 
-TaskQueue::~TaskQueue() {
+template<typename T>
+TaskQueue<T>::~TaskQueue() {
     pthread_mutex_destroy(&m_mutex);
 }
 
 //取出任务
-Task TaskQueue::getTask() {
-    Task task;
+template<typename T>
+Task<T> TaskQueue<T>::getTask() {
+    Task<T> task;
     if(!m_queue.empty()) {
         pthread_mutex_lock(&m_mutex);
         task = m_queue.front();
@@ -22,14 +25,16 @@ Task TaskQueue::getTask() {
 }
 
 //加入任务
-void TaskQueue::addTask(Task task) {
+template<typename T>
+void TaskQueue<T>::addTask(Task<T> task) {
     pthread_mutex_lock(&m_mutex);
     m_queue.push(task);
     pthread_mutex_unlock(&m_mutex);
 }
 
-void TaskQueue::addTask(callback function, void* arg) {
+template<typename T>
+void TaskQueue<T>::addTask(callback function, void* arg) {
     pthread_mutex_lock(&m_mutex);
-    m_queue.push(Task(function, arg));
+    m_queue.push(Task<T>(function, arg));
     pthread_mutex_unlock(&m_mutex);
 }

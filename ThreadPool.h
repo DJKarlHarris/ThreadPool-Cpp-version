@@ -4,6 +4,7 @@
 #include "TaskQueue.h"
 #include <vector>
 
+template<typename T>
 class ThreadPool {
 
 public:
@@ -14,7 +15,9 @@ public:
     ~ThreadPool();
 
     // 给线程池添加任务
-    void addTask(Task task);
+    void addTask(Task<T> task);
+    //overload
+    void addTask(callback funciton, void* arg);
 
     // 获取线程池中工作的线程的个数
     int getBusyNum();
@@ -34,7 +37,7 @@ private:
 
 private:
     // 任务队列
-    TaskQueue *m_taskqueue;
+    TaskQueue<T> *m_taskqueue;
 
     pthread_t m_managerID;    // 管理者线程ID
     pthread_t* m_workerID;  // 工作的线程ID
@@ -45,6 +48,8 @@ private:
     int m_exitNum;            // 要销毁的线程个数
     pthread_mutex_t m_mutex;  // 锁整个的线程池
     pthread_cond_t m_notEmpty;    // 任务队列是不是空了
+    static const int KILLNUMBER = 2;
+    static const int CREATENUMBER = 2;
 
     bool shutdown;           // 是不是要销毁线程池, 销毁为1, 不销毁为0
 
