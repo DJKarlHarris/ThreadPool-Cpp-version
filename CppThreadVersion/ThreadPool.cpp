@@ -11,6 +11,7 @@ template<typename T>
 ThreadPool<T>::ThreadPool(int min, int max) {
 
     do {
+        shutdown = false;
         //创建工作线程数组
         m_workerID = new std::thread[max];
 

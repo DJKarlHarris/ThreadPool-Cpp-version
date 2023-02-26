@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/workspace/threadpool/CppThreadVersion",
+            "binaryPath": "/home/workspace/threadpool/CppThreadVersion/main",
+            "binaryArgs": []
+        }
+    ]
+}

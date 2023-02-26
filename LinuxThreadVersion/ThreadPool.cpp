@@ -9,6 +9,8 @@ template<typename T>
 ThreadPool<T>::ThreadPool(int min, int max) {
 
     do {
+
+        shutdown = false;
         //创建工作线程数组
         m_workerID = new pthread_t[max];
 
@@ -18,6 +20,7 @@ ThreadPool<T>::ThreadPool(int min, int max) {
         m_busyNum = 0;
         m_liveNum = min;    // 和最小个数相等
         m_exitNum = 0;
+        
 
         m_taskqueue = new TaskQueue<T>();
 

@@ -13,7 +13,7 @@ void taskFunc(void* arg) {
 
 int main() {
     ThreadPool<int> pool = ThreadPool<int>(3, 10);
-    for(int i = 0; i <100000; i++) {
+    for(int i = 0; i < 1000; i++) {
         int* num = new int(i);
         //printf("%d \n",*num);
         Task<int> task = Task<int>(taskFunc, num);
@@ -22,7 +22,7 @@ int main() {
     }
 
     //等待工作线程处理完毕
-    sleep(12);
+    sleep(3);
     
     return 0;
 }

@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/workspace/threadpool/LinuxThreadVersion",
+            "binaryPath": "/home/workspace/threadpool/LinuxThreadVersion/main",
+            "binaryArgs": []
+        }
+    ]
+}
